@@ -1,0 +1,280 @@
+/* RA.One - Hologram, ArcReactor, corner energies, character-select cards */
+
+/* ── Hologram Card ── */
+.hologram-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,10,10,0.05) 0%, rgba(0,0,0,0.8) 50%, rgba(255,60,0,0.05) 100%);
+  border: 1px solid hsl(0 95% 60% / 0.3);
+  border-radius: 1rem;
+  backdrop-filter: blur(24px);
+  transition: all 0.35s ease;
+}
+
+.hologram-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    hsl(0 95% 60% / 0.08) 45%,
+    hsl(15 90% 60% / 0.12) 50%,
+    hsl(0 95% 60% / 0.08) 55%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: hologramSweep 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hologram-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsl(0 95% 60% / 0.025) 2px,
+    hsl(0 95% 60% / 0.025) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  animation: scanlines 4s linear infinite;
+}
+
+.hologram-card:hover {
+  border-color: hsl(0 95% 60% / 0.8);
+  box-shadow:
+    0 0 20px hsl(0 95% 60% / 0.3),
+    0 0 60px hsl(0 95% 60% / 0.15),
+    inset 0 0 30px hsl(0 95% 60% / 0.05);
+  transform: translateY(-6px);
+}
+
+.hologram-card:hover::before {
+  animation-duration: 1.2s;
+}
+
+/* ── Character Select Card ── */
+.char-select-card {
+  position: relative;
+  background: linear-gradient(160deg, hsl(0 0% 8%) 0%, hsl(0 0% 5%) 100%);
+  border: 1px solid hsl(0 95% 60% / 0.25);
+  border-radius: 1rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.char-select-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, hsl(0 95% 60%), hsl(15 90% 60%), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.char-select-card:hover::before {
+  opacity: 1;
+  animation: borderPulse 1.5s ease infinite;
+}
+
+.char-select-card:hover {
+  border-color: hsl(0 95% 60% / 0.7);
+  box-shadow:
+    0 0 25px hsl(0 95% 60% / 0.25),
+    0 0 60px hsl(0 95% 60% / 0.1);
+  transform: translateY(-8px) scale(1.02);
+}
+
+.char-select-card .selection-indicator {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 0;
+  background: linear-gradient(0deg, hsl(0 95% 60% / 0.2), transparent);
+  transition: height 0.3s ease;
+}
+
+.char-select-card:hover .selection-indicator {
+  height: 100%;
+}
+
+/* Corner Energy Symbol */
+.corner-energy::before,
+.corner-energy::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: hsl(0 95% 60% / 0.6);
+  border-style: solid;
+  transition: all 0.3s ease;
+}
+
+.corner-energy::before {
+  top: 6px; left: 6px;
+  border-width: 2px 0 0 2px;
+}
+
+.corner-energy::after {
+  bottom: 6px; right: 6px;
+  border-width: 0 2px 2px 0;
+}
+
+.corner-energy:hover::before,
+.corner-energy:hover::after {
+  width: 28px;
+  height: 28px;
+  border-color: hsl(0 95% 60%);
+  box-shadow: 0 0 8px hsl(0 95% 60% / 0.4);
+}
+
+/* Arc Reactor Orb */
+.arc-reactor {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 35%,
+    hsl(0 95% 80% / 0.8) 0%,
+    hsl(0 95% 60% / 0.5) 30%,
+    hsl(0 80% 40% / 0.3) 60%,
+    transparent 80%
+  );
+  filter: blur(60px);
+  animation: arcReactorPulse 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.arc-reactor-core {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(0 95% 80%) 0%, hsl(0 95% 60%) 40%, transparent 70%);
+  animation: coreGlow 2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* RA.One Energy Symbol Corners */
+.ra-corner {
+  position: absolute;
+  width: 40px; height: 40px;
+  pointer-events: none;
+}
+.ra-corner svg {
+  width: 100%; height: 100%;
+  animation: rotateEnergy 5s linear infinite;
+  filter: drop-shadow(0 0 6px hsl(0 95% 60%));
+}
+.ra-corner-tl { top: 8px; left: 8px; }
+.ra-corner-tr { top: 8px; right: 8px; transform: scaleX(-1); }
+.ra-corner-bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+.ra-corner-br { bottom: 8px; right: 8px; transform: scale(-1); }
+
+/* Announcement Bar */
+.announcement-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 60;
+  background: linear-gradient(90deg, hsl(0 0% 4% / 0.95), hsl(0 0% 6% / 0.95));
+  border-top: 1px solid hsl(0 95% 60% / 0.4);
+  backdrop-filter: blur(20px);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 -4px 30px hsl(0 95% 60% / 0.15);
+}
+
+.announcement-ticker {
+  overflow: hidden;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.announcement-ticker-inner {
+  display: inline-block;
+  animation: tickerScroll 25s linear infinite;
+  white-space: nowrap;
+}
+
+/* Floating Tech Elements */
+.floating-tech {
+  position: absolute;
+  pointer-events: none;
+}
+
+.tech-hexagon {
+  width: 60px; height: 60px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: linear-gradient(135deg, hsl(0 95% 60% / 0.1), hsl(15 90% 60% / 0.05));
+  border: 1px solid hsl(0 95% 60% / 0.2);
+  animation: floatHex 8s ease-in-out infinite;
+}
+
+.tech-diamond {
+  width: 40px; height: 40px;
+  background: transparent;
+  border: 1px solid hsl(0 95% 60% / 0.25);
+  transform: rotate(45deg);
+  animation: floatHex 10s ease-in-out infinite reverse;
+}
+
+.tech-ring {
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  border: 1px solid hsl(0 95% 60% / 0.3);
+  box-shadow: 0 0 10px hsl(0 95% 60% / 0.2), inset 0 0 10px hsl(0 95% 60% / 0.1);
+  animation: spinRing 6s linear infinite;
+}
+
+/* ── Keyframes ── */
+@keyframes hologramSweep {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(300%) skewX(-15deg); }
+}
+
+@keyframes scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+@keyframes borderPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes arcReactorPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+@keyframes coreGlow {
+  from { box-shadow: 0 0 20px hsl(0 95% 60% / 0.5), 0 0 60px hsl(0 95% 60% / 0.2); }
+  to { box-shadow: 0 0 40px hsl(0 95% 60% / 0.9), 0 0 120px hsl(0 95% 60% / 0.5); }
+}
+
+@keyframes rotateEnergy {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes floatHex {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-20px) rotate(15deg); }
+  75% { transform: translateY(10px) rotate(-10deg); }
+}
+
+@keyframes spinRing {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
