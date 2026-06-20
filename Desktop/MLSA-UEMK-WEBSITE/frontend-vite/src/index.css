@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Global styles */
+body {
+  overflow-x: hidden;
+
+  /* Main cursor */
+  cursor: url('/cursors/cursr.cur') 8 8, auto;
+}
+
+/* Apply custom cursor everywhere */
+* {
+  box-sizing: border-box;
+  cursor: inherit;
+}
+
+/* Clickable elements */
+a,
+button,
+.cursor-pointer,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+select,
+summary {
+  cursor: url('/cursors/finge.cur') 8 8, pointer !important;
+}
+
+/* Text inputs */
+input,
+textarea {
+  cursor: text;
+}
+
+/* Text selection */
+::selection {
+  background: #2563eb;
+  color: white;
+}
+
+/* Optional smoother hover feel */
+a,
+button,
+.cursor-pointer {
+  transition: all 0.2s ease;
+}
