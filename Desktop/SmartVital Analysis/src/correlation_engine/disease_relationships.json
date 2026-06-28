@@ -1,0 +1,22 @@
+{
+  "Diabetes": {
+    "Heart Disease": 0.75,
+    "Stroke": 0.85,
+    "Lung Cancer": 0.18
+  },
+  "Heart Disease": {
+    "Stroke": 0.72,
+    "Diabetes": 0.68,
+    "Lung Cancer": 0.31
+  },
+  "Stroke": {
+    "Heart Disease": 0.72,
+    "Diabetes": 0.81,
+    "Lung Cancer": 0.29
+  },
+  "Lung Cancer": {
+    "Heart Disease": 0.40,
+    "Stroke": 0.29,
+    "Diabetes": 0.18
+  }
+}
