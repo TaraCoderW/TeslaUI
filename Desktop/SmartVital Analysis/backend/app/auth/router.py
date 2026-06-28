@@ -34,6 +34,7 @@ async def signup(request: Request, user: UserCreate):
     user_dict.update({
         "is_verified": False,
         "is_onboarded": False,
+        "is_active": True,
         "created_at": datetime.utcnow(),
         "last_login": None,
         "theme_preference": "system"
@@ -70,6 +71,9 @@ async def login(request: Request, response: Response, credentials: LoginRequest)
     user = await users_collection.find_one({"email": credentials.email})
     if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+    if user.get("is_active", True) is False:
+        raise HTTPException(status_code=403, detail="Account is deactivated")
         
     if not user["is_verified"]:
         # Resend OTP if not verified
@@ -234,6 +238,38 @@ async def logout(response: Response, current_user: dict = Depends(get_current_us
         secure=True
     )
     return {"message": "Logged out successfully"}
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.post("/change-password")
+async def change_password(request: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    user = await users_collection.find_one({"_id": ObjectId(current_user["id"])})
+    if not user or not verify_password(request.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    hashed_password = get_password_hash(request.new_password)
+    await users_collection.update_one(
+        {"_id": ObjectId(current_user["id"])},
+        {"$set": {"password_hash": hashed_password}}
+    )
+    return {"message": "Password updated successfully"}
+
+@router.post("/deactivate")
+async def deactivate_account(response: Response, current_user: dict = Depends(get_current_user)):
+    await users_collection.update_one(
+        {"_id": ObjectId(current_user["id"])},
+        {"$set": {"is_active": False}}
+    )
+    # Clear session exactly like logout
+    await refresh_tokens_collection.delete_one({"user_id": current_user["id"]})
+    response.delete_cookie(
+        "refresh_token",
+        samesite="none",
+        secure=True
+    )
+    return {"message": "Account deactivated successfully"}
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
