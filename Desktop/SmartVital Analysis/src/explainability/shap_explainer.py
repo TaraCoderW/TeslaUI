@@ -42,12 +42,16 @@ class SmartVitalSHAP:
         self.feature_map = self.config["feature_map"]
 
     def _build_explainer(self, model, X_background: np.ndarray):
-        """Build shap.TreeExplainer."""
-        return shap.TreeExplainer(
-            model,
-            data=X_background,
-            feature_perturbation="interventional",
-        )
+        """Build shap.TreeExplainer or fallback to KernelExplainer."""
+        try:
+            return shap.TreeExplainer(
+                model,
+                data=X_background,
+                feature_perturbation="interventional",
+            )
+        except Exception:
+            predict_fn = getattr(model, "predict_proba", model.predict)
+            return shap.KernelExplainer(predict_fn, X_background)
 
     def get_shap_values(
         self,

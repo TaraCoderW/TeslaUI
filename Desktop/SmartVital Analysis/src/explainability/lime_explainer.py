@@ -57,8 +57,15 @@ class SmartVitalLIME:
         feature_names = list(X_background_processed.columns)
         
         def custom_predict(X_array):
-            # Model takes processed numpy array or dataframe and predicts
-            return model.predict_proba(X_array)
+            try:
+                return model.predict_proba(X_array)
+            except Exception:
+                preds = model.predict(X_array)
+                # preds could be 1D (labels) or 2D. We need 2D probabilities [P(class_0), P(class_1)]
+                if len(preds.shape) == 1:
+                    return np.array([[1.0 - float(p), float(p)] for p in preds])
+                else:
+                    return np.array([[1.0 - float(p[1]), float(p[1])] for p in preds])
 
         # Build explainer on processed background data
         explainer = lime_tabular.LimeTabularExplainer(

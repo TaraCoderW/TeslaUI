@@ -39,16 +39,13 @@ def get_explainer(pipeline_class, dataset_path, model_dir, prefix, model_path):
 # Request schemas
 class HeartRequest(BaseModel):
     Age: int
-    Sex: str
-    ChestPainType: str
-    RestingBP: float
-    Cholesterol: float
-    FastingBS: int
-    RestingECG: str
-    MaxHR: float
-    ExerciseAngina: str
-    Oldpeak: float
-    ST_Slope: str
+    Heart_Rate: float
+    Diabetes: int
+    Family_History: int
+    Smoking: int
+    Alcohol_Consumption: float
+    Exercise_Hours_Per_Week: float
+    Diet: str
 
 class StrokeRequest(BaseModel):
     gender: str
@@ -57,20 +54,20 @@ class StrokeRequest(BaseModel):
     heart_disease: int
     ever_married: str
     work_type: str
-    residence_type: str
+    Residence_type: str
     avg_glucose_level: float
     bmi: float
     smoking_status: str
 
 class DiabetesRequest(BaseModel):
-    gender: str
-    age: int
-    hypertension: int
-    heart_disease: int
-    smoking_history: str
-    bmi: float
-    HbA1c_level: float
-    blood_glucose_level: float
+    Pregnancies: int
+    Glucose: float
+    BloodPressure: float
+    SkinThickness: float
+    Insulin: float
+    BMI: float
+    DiabetesPedigreeFunction: float
+    Age: int
 
 class LungCancerRequest(BaseModel):
     GENDER: str
@@ -91,13 +88,30 @@ class LungCancerRequest(BaseModel):
 
 @router.post("/heart")
 async def predict_heart(request: HeartRequest, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    pipe, model, X_bg, raw_df = get_explainer(HeartDataPipeline, 'datasets/heart.csv', 'models/heart/', 'heart', 'models/heart/heart_best_ml_model.pkl')
+    pipe, model, X_bg, raw_df = get_explainer(HeartDataPipeline, 'datasets/heart_new.csv', 'models/heart/', 'heart', 'models/heart/heart_new_model.pkl')
     if not model:
         raise HTTPException(status_code=500, detail="Model not trained.")
         
-    input_data = pd.DataFrame([request.model_dump()])
+    data_dict = request.model_dump()
+    mapped_data = {
+        'Age': data_dict['Age'],
+        'Heart Rate': data_dict['Heart_Rate'],
+        'Diabetes': data_dict['Diabetes'],
+        'Family History': data_dict['Family_History'],
+        'Smoking': data_dict['Smoking'],
+        'Alcohol Consumption': data_dict['Alcohol_Consumption'],
+        'Exercise Hours Per Week': data_dict['Exercise_Hours_Per_Week'],
+        'Diet': data_dict['Diet']
+    }
+    input_data = pd.DataFrame([mapped_data])
     processed_data = pipe.process_data(input_data, training=False)
-    prob = float(model.predict_proba(processed_data)[0][1])
+    
+    # Try predicting - models might have different formats
+    try:
+        prob = float(model.predict_proba(processed_data)[0][1])
+    except Exception:
+        preds = model.predict(processed_data)
+        prob = float(preds[0]) if len(preds.shape) == 1 else float(preds[0][1])
     
     shap_module = SmartVitalSHAP(disease="heart")
     lime_module = SmartVitalLIME(disease="heart")
@@ -145,13 +159,18 @@ async def predict_heart(request: HeartRequest, db: Session = Depends(get_db), cu
 
 @router.post("/stroke")
 async def predict_stroke(request: StrokeRequest, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    pipe, model, X_bg, raw_df = get_explainer(StrokeDataPipeline, 'datasets/stroke.csv', 'models/stroke/', 'stroke', 'models/stroke/stroke_best_ml_model.pkl')
+    pipe, model, X_bg, raw_df = get_explainer(StrokeDataPipeline, 'datasets/stroke_new.csv', 'models/stroke/', 'stroke', 'models/stroke/stroke_new_model.pkl')
     if not model:
         raise HTTPException(status_code=500, detail="Model not trained.")
         
     input_data = pd.DataFrame([request.model_dump()])
     processed_data = pipe.process_data(input_data, training=False)
-    prob = float(model.predict_proba(processed_data)[0][1])
+    
+    try:
+        prob = float(model.predict_proba(processed_data)[0][1])
+    except Exception:
+        preds = model.predict(processed_data)
+        prob = float(preds[0]) if len(preds.shape) == 1 else float(preds[0][1])
     
     shap_module = SmartVitalSHAP(disease="stroke")
     lime_module = SmartVitalLIME(disease="stroke")
@@ -196,13 +215,18 @@ async def predict_stroke(request: StrokeRequest, db: Session = Depends(get_db), 
 
 @router.post("/diabetes")
 async def predict_diabetes(request: DiabetesRequest, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    pipe, model, X_bg, raw_df = get_explainer(DiabetesDataPipeline, 'datasets/diabetes_prediction_dataset.csv', 'models/diabetes/', 'diabetes', 'models/diabetes/diabetes_best_ml_model.pkl')
+    pipe, model, X_bg, raw_df = get_explainer(DiabetesDataPipeline, 'datasets/diabetes_new.csv', 'models/diabetes/', 'diabetes', 'models/diabetes/diabetes_new_model.pkl')
     if not model:
         raise HTTPException(status_code=500, detail="Model not trained.")
         
     input_data = pd.DataFrame([request.model_dump()])
     processed_data = pipe.process_data(input_data, training=False)
-    prob = float(model.predict_proba(processed_data)[0][1])
+    
+    try:
+        prob = float(model.predict_proba(processed_data)[0][1])
+    except Exception:
+        preds = model.predict(processed_data)
+        prob = float(preds[0]) if len(preds.shape) == 1 else float(preds[0][1])
     
     shap_module = SmartVitalSHAP(disease="diabetes")
     lime_module = SmartVitalLIME(disease="diabetes")
@@ -247,7 +271,7 @@ async def predict_diabetes(request: DiabetesRequest, db: Session = Depends(get_d
 
 @router.post("/lung")
 async def predict_lung(request: LungCancerRequest, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    pipe, model, X_bg, raw_df = get_explainer(LungCancerDataPipeline, 'datasets/survey lung cancer.csv', 'models/lung/', 'lung', 'models/lung/lung_best_ml_model.pkl')
+    pipe, model, X_bg, raw_df = get_explainer(LungCancerDataPipeline, 'datasets/lung_cancer_new.csv', 'models/lung/', 'lung', 'models/lung/lung_cancer_new_model.pkl')
     if not model:
         raise HTTPException(status_code=500, detail="Model not trained.")
         
@@ -264,7 +288,12 @@ async def predict_lung(request: LungCancerRequest, db: Session = Depends(get_db)
     }
     input_data = pd.DataFrame([mapped_data])
     processed_data = pipe.process_data(input_data, training=False)
-    prob = float(model.predict_proba(processed_data)[0][1])
+    
+    try:
+        prob = float(model.predict_proba(processed_data)[0][1])
+    except Exception:
+        preds = model.predict(processed_data)
+        prob = float(preds[0]) if len(preds.shape) == 1 else float(preds[0][1])
     
     shap_module = SmartVitalSHAP(disease="lung")
     lime_module = SmartVitalLIME(disease="lung")
