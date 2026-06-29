@@ -517,10 +517,10 @@ async def predict_from_questionnaire(submission: QuestionnaireSubmission, db: Se
     lifestyle_modifier = inferred['lifestyle_risk_modifier']
     
     pipeline_map = {
-        'heart': (HeartDataPipeline, 'datasets/heart.csv', 'models/heart/', 'heart', 'models/heart/heart_best_ml_model.pkl'),
-        'diabetes': (DiabetesDataPipeline, 'datasets/diabetes_prediction_dataset.csv', 'models/diabetes/', 'diabetes', 'models/diabetes/diabetes_best_ml_model.pkl'),
-        'stroke': (StrokeDataPipeline, 'datasets/stroke.csv', 'models/stroke/', 'stroke', 'models/stroke/stroke_best_ml_model.pkl'),
-        'lung': (LungCancerDataPipeline, 'datasets/survey lung cancer.csv', 'models/lung/', 'lung', 'models/lung/lung_best_ml_model.pkl')
+        'heart': (HeartDataPipeline, 'datasets/heart_new.csv', 'models/heart/', 'heart', 'models/heart/heart_new_model.pkl'),
+        'diabetes': (DiabetesDataPipeline, 'datasets/diabetes_new.csv', 'models/diabetes/', 'diabetes', 'models/diabetes/diabetes_new_model.pkl'),
+        'stroke': (StrokeDataPipeline, 'datasets/stroke_new.csv', 'models/stroke/', 'stroke', 'models/stroke/stroke_new_model.pkl'),
+        'lung': (LungCancerDataPipeline, 'datasets/lung_cancer_new.csv', 'models/lung/', 'lung', 'models/lung/lung_cancer_new_model.pkl')
     }
     
     pipe_cls, data_path, mod_dir, prefix, mod_path = pipeline_map[disease]
