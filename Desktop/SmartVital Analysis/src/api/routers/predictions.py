@@ -17,6 +17,7 @@ from src.correlation_engine.engine import ComorbidityEngine
 from backend.app.auth.dependencies import get_current_user
 from backend.app.database import predictions_collection
 import datetime
+from src.utils.feature_inference import infer_heart_features, infer_stroke_features, infer_diabetes_features, infer_lung_features
 
 router = APIRouter()
 engine = HealthAssistantEngine()
@@ -488,3 +489,110 @@ async def run_simulation(request: SimulationRequest, db: Session = Depends(get_d
     }
 
 
+
+
+class QuestionnaireSubmission(BaseModel):
+    disease: str
+    answers: dict
+    tier_reached: int
+
+@router.post("/predict/questionnaire")
+async def predict_from_questionnaire(submission: QuestionnaireSubmission, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    disease = submission.disease
+    answers = submission.answers
+    answers['tier_reached'] = submission.tier_reached
+    
+    inference_map = {
+        'heart': infer_heart_features,
+        'diabetes': infer_diabetes_features,
+        'stroke': infer_stroke_features,
+        'lung': infer_lung_features
+    }
+    
+    if disease not in inference_map:
+        raise HTTPException(status_code=400, detail="Unknown disease type")
+        
+    inferred = inference_map[disease](answers)
+    features_dict = inferred['features']
+    lifestyle_modifier = inferred['lifestyle_risk_modifier']
+    
+    pipeline_map = {
+        'heart': (HeartDataPipeline, 'datasets/heart.csv', 'models/heart/', 'heart', 'models/heart/heart_best_ml_model.pkl'),
+        'diabetes': (DiabetesDataPipeline, 'datasets/diabetes_prediction_dataset.csv', 'models/diabetes/', 'diabetes', 'models/diabetes/diabetes_best_ml_model.pkl'),
+        'stroke': (StrokeDataPipeline, 'datasets/stroke.csv', 'models/stroke/', 'stroke', 'models/stroke/stroke_best_ml_model.pkl'),
+        'lung': (LungCancerDataPipeline, 'datasets/survey lung cancer.csv', 'models/lung/', 'lung', 'models/lung/lung_best_ml_model.pkl')
+    }
+    
+    pipe_cls, data_path, mod_dir, prefix, mod_path = pipeline_map[disease]
+    pipe, model, _, _ = get_explainer(pipe_cls, data_path, mod_dir, prefix, mod_path)
+    
+    if not model:
+        raise HTTPException(status_code=500, detail="Model not trained.")
+        
+    input_data = pd.DataFrame([features_dict])
+    processed_data = pipe.process_data(input_data, training=False)
+    
+    # We use model.predict_proba or model.predict fallback which is handled in our LIME/SHAP wrappers or we do it here.
+    if hasattr(model, 'predict_proba'):
+        base_prob = float(model.predict_proba(processed_data)[0][1])
+    else:
+        # Fallback if model doesn't support predict_proba (e.g. some SVC)
+        base_prob = float(model.predict(processed_data)[0])
+        
+    prob = min(0.99, max(0.01, base_prob + lifestyle_modifier))
+    
+    # Generate SHAP and LIME explanations
+    shap_module = SmartVitalSHAP(disease=disease)
+    lime_module = SmartVitalLIME(disease=disease)
+    
+    # We need X_bg (background dataset). It's available via pipe.process_data(pipe.load_data())
+    try:
+        raw_bg = pipe.load_data()
+        X_bg = pipe.process_data(raw_bg, training=False)
+        shap_vals, feat_names, _ = shap_module.get_shap_values(model, X_bg, processed_data)
+        shap_data = shap_module.get_top_features(shap_vals, feat_names, 5)
+        lime_data = lime_module.get_explanation(model, X_bg, processed_data, num_features=6)
+    except Exception as e:
+        print(f"Explainability Error: {e}")
+        shap_data = []
+        lime_data = []
+        
+    risk_level = "HIGH" if prob > 0.6 else "MODERATE" if prob > 0.3 else "LOW"
+    narrative = shap_module.generate_narrative(shap_data, risk_level, prob)
+    
+    disease_display = disease.replace('_', ' ').title()
+    if disease == 'heart': disease_display = 'Heart Disease'
+    elif disease == 'lung': disease_display = 'Lung Cancer'
+        
+    insight_text = engine.analyze_risk(disease_display, prob)
+
+    # Save to timeline
+    assessment = HealthAssessment(
+        disease=disease_display,
+        risk_score=float(prob),
+        insight=insight_text,
+        raw_inputs=json.dumps(answers)
+    )
+    db.add(assessment)
+    db.commit()
+
+    # Save to MongoDB
+    await predictions_collection.insert_one({
+        "user_id": current_user["id"],
+        "model": disease,
+        "probability": float(prob),
+        "risk_level": risk_level,
+        "inputs": answers,
+        "created_at": datetime.datetime.utcnow()
+    })
+
+    return {
+        "disease": disease_display,
+        "risk_score": float(prob),
+        "risk_level": risk_level,
+        "insight": insight_text,
+        "preventive_actions": engine.generate_preventive_actions(disease_display),
+        "shap_data": shap_data,
+        "lime_data": lime_data,
+        "narrative": narrative
+    }
